@@ -1,0 +1,274 @@
+<html>
+
+	<head>
+		<meta charset='utf-8'>
+		<title>Server</title>
+		<!--создание иконки у вкладки-->
+		<!--<link rel="shortcut icon" href="/icon/favicon.png" type="image/x-icon">-->
+		<!--<link rel="stylesheet" href="leaflet.css" />-->
+		<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7/leaflet.css" />
+		<link rel="stylesheet" href="MarkerCluster.css" />
+		<link rel="stylesheet" href="MarkerCluster.Default.css" />
+		<link rel="stylesheet" href="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+		
+		<script src="http://cdn.leafletjs.com/leaflet-0.7/leaflet.js"></script>
+		<script src="leaflet.markercluster-src.js"></script>
+		<script src="http://code.jquery.com/jquery-1.10.2.js"></script>
+		<script src="http://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+		
+		
+		<style>
+			html, body, #mapid{
+				height: 100%;
+				width:100%;
+				margin:0;
+			}
+			#myButton{
+				position:absolute;
+				top: 9px;
+				left:60px;
+				width:50px;
+				height:50px;
+				border-radius:10px;
+				background-color: rgba(255, 153, 0, 0.7);
+				z-index:2000;
+			}
+			#myBlock{
+				width: 240px; 
+				height: 300px;
+    			background-color: rgba(180, 238, 180, 1);
+    			border: solid 1px black; 
+    			border-radius: 20px ;
+				box-shadow: 0 0 5px #888;
+				left: 61px;
+				padding: 0.5em;
+				position: absolute;
+				top: 65px;
+				z-index: 1000;
+			}
+			#loading {
+				position: absolute;
+				display: none;
+				text-align:center;
+				background: #555 url('http://katushka.in.ua/templates/katushka2/images/ajax-loader.gif') center center no-repeat;
+				opacity: 0.99;
+				height:100%;
+				width:100%;
+				margin-left:-8;
+				margin-top:-8;
+				padding:0;
+				border-radius:20px;
+				z-index: 2001;
+			}
+		</style>
+		
+		
+	<script>
+	
+			
+		
+		document.addEventListener('DOMContentLoaded', function(){
+		
+		
+				var markers = L.markerClusterGroup();
+				var startTime = "2016-04-03";
+				var endTime = "2016-04-04";
+				var url;
+				var layer = L.geoJson();
+				var myJson;
+				
+				$( "#myButton" ).click (function(){
+					$("#myBlock").slideToggle(300);
+				});
+				
+				
+				$(function() {
+					$( "#datepickerS" ).datepicker({	
+						onSelect: function(dateText, inst) { 
+							sTime = dateText.split('/');
+							startTime = sTime[2]+'-'+sTime[0]+'-'+sTime[1];
+							//console.log(startTime);
+						}
+					});
+				});
+				$(function() {
+					$( "#datepickerE" ).datepicker({
+						onSelect: function(dateText, inst) { 
+							//console.log(inst);
+							markers.clearLayers();
+							layer.clearLayers();
+							document.getElementById('loading').style.display="block";
+							eTime = dateText.split('/');
+							endTime = eTime[2]+'-'+eTime[0]+'-'+eTime[1];
+							//console.log(endTime);
+							url = "http://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime="+startTime+"&endtime="+endTime+'';
+							
+							$.ajax({
+								url,
+								type: 'GET',
+								success: onGetSuccess,
+								error: onGetError
+							});
+
+						}
+					});
+				});
+				
+				
+				
+				
+				$(function() {
+					var select = $( "#minbeds" );
+					var slider = $( "<div id='slider'></div>" ).insertAfter( select ).slider({
+						min: 0,
+						max: 7,
+						//range: "min",
+						value: select[ 0 ].selectedIndex,
+						slide: function( event, ui ) {
+							select[ 0 ].selectedIndex = ui.value;
+							//console.log(ui.value);
+							if (startTime && endTime){
+							markers.clearLayers();
+							layer.clearLayers();
+							layer = L.geoJson(myJson, {
+								filter: function(feature){
+									if(feature.properties.mag>=ui.value){
+										return feature;
+									};
+								},
+								onEachFeature: function(feature, lyr){
+									lyr.bindPopup("<b>Info: </b><i>"+feature.properties.title+"</i><br><b>Magnitude: </b><i>"+feature.properties.mag+"</i>");
+								}
+							});
+							
+							markers.addLayer(layer);
+							markers.addTo(myMap);
+								/*document.getElementById('loading').style.display="block";
+								url = "http://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime="+startTime+"&endtime="+endTime+'&minmagnitude='+this.selectedIndex;
+								$.get(
+									url,
+									{},
+									onGetSuccess
+								);
+								*/
+							}
+						}
+					});
+					$( "#minbeds" ).change(function() {
+						//console.log(this.selectedIndex);
+						var sValue = this.selectedIndex;
+						//console.log(startTime);
+						//console.log(endTime);
+						slider.slider( "value", this.selectedIndex);
+						if (startTime && endTime){
+							markers.clearLayers();
+							layer.clearLayers();
+							layer = L.geoJson(myJson, {
+								filter: function(feature){
+									if(feature.properties.mag>=sValue){
+										return feature;
+									};
+								},
+								onEachFeature: function(feature, lyr){
+									lyr.bindPopup("<b>Info: </b><i>"+feature.properties.title+"</i><br><b>Magnitude: </b><i>"+feature.properties.mag+"</i>");
+								}
+							});
+							
+							markers.addLayer(layer);
+							markers.addTo(myMap);
+							/*document.getElementById('loading').style.display="block";
+							url = "http://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime="+startTime+"&endtime="+endTime+'&minmagnitude='+this.selectedIndex;
+							$.get(
+								url,
+								{},
+								onGetSuccess
+							);
+							*/
+						}
+					});
+				});
+				
+				
+				
+				
+				
+				var myMap = L.map('mapid', {
+					center:[46.505, -120.09],
+					zoom: 4
+				});
+				
+				/*L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+					attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+				}).addTo(myMap);
+				*/
+				
+				L.tileLayer( 'http://{s}.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.png', {
+					//attribution: '&copy; <a href="http://osm.org/copyright" title="OpenStreetMap" target="_blank">OpenStreetMap</a> contributors | Tiles Courtesy of <a href="http://www.mapquest.com/" title="MapQuest" target="_blank">MapQuest</a> <img src="http://developer.mapquest.com/content/osm/mq_logo.png" width="16" height="16">',
+					subdomains: ['otile1','otile2','otile3','otile4']
+				}).addTo(myMap);
+				
+				var firstUrl = "http://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime="+startTime+"&endtime="+endTime+"";
+				$.get(
+								firstUrl,
+								{},
+								onGetSuccess
+							);
+							
+				
+				function onGetSuccess(data){
+					
+					//console.log(myMap._layers);
+					myJson = data;
+					layer = L.geoJson(myJson, {
+								onEachFeature: function(feature, lyr){
+									lyr.bindPopup("<b>Info: </b><i>"+feature.properties.title+"</i><br><b>Magnitude: </b><i>"+feature.properties.mag+"</i>");
+								}
+							});
+					
+					markers.addLayer(layer);
+					markers.addTo(myMap);
+					document.getElementById('loading').style.display="none";
+				};
+				
+				function onGetError(data){
+					console.log(data);
+					alert("Ваш запрос не может быть выполнен. Статус ошибки: "+data.status);
+					document.getElementById('loading').style.display='none';
+				}
+				
+			}
+		)
+	
+	</script>
+	</head>
+	
+	<body>
+	
+		<div id="mapid"></div>
+		<button id='myButton'><img src='images/sixNP.png' style="margin-left:-5; padding:0; width:45px;height:45px"></img></button>
+		<div id='myBlock' style='display:none;'>
+		<b id="loading"><br><br><br> Идёт запрос к серверу...</b>
+			<p style='position:absolute; z-index:1000; top:1px; text-align:center;'>Фильтр по дате:</p>
+			<p style='position:absolute; z-index:1000; top:40px; margin-left:10px;'>Start Date: <input type="text" value="04/03/2016" id="datepickerS"></p>
+			<p style='position:absolute; z-index:1000; top:80px; margin-left:10px;'>End Date: <input type="text" value="04/04/2016" id="datepickerE"></p>
+			<hr style='position:absolute; z-index:1000; top:135px; width:90%; color:black;'>
+			<p style='position:absolute; z-index:1000; top:150px; text-align:center;'>Фильтр по магнитуде:</p>
+			<div id="slider1" >
+				<form id="reservation" style='position:absolute;z-index:1000; width:90%;top:200px; margin-left:4px; padding-top:5px' >
+					<label for="minbeds" ></label>
+					<select name="minbeds" id="minbeds">
+						<option>0</option>
+						<option>1</option>
+						<option>2</option>
+						<option>3</option>
+						<option>4</option>
+						<option>5</option>
+						<option>6</option>
+						<option>7</option>
+					</select>
+				</form>
+			</div>
+		</div>
+		
+	</body>
+</html>
